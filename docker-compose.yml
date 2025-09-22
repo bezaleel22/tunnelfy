@@ -1,0 +1,19 @@
+services:
+  tunnelfy:
+    build: .
+    container_name: tunnelfy
+    restart: unless-stopped
+    environment:
+      - STATIC_PROXIES=portal.example.com:8081,admin.example.com:8082
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tunnelfy.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.homelab.example.com`, `{domain:portal.example.com}`, `{domain:admin.example.com}`)"
+      - "traefik.http.routers.tunnelfy.entrypoints=websecure"
+      - "traefik.http.routers.tunnelfy.tls=true"
+      - "traefik.http.services.tunnelfy.loadbalancer.server.port=8080"
+
+networks:
+  dokploy-network:
+    external: true

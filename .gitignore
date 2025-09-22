@@ -1,0 +1,24 @@
+# Rust build output
+/target/
+
+# SQLite database file
+*.db
+
+# dotenv environment files
+.env
+.env.* 
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Backup files
+*.bak
