@@ -1,18 +1,37 @@
-# Rust build output
-/target/
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+tunnelfy
 
-# SQLite database file
-*.db
+# Test binary, built with `go test -c`
+*.test
 
-# dotenv environment files
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+
+# dotenv environment variables file
 .env
-.env.* 
+.env.*
+
+# Test keys generated during development
+test_key
+test_key.pub
 
 # IDE/editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # macOS
 .DS_Store
@@ -22,3 +41,4 @@
 
 # Backup files
 *.bak
+*.bak.*
