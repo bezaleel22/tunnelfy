@@ -19,7 +19,6 @@ go.work
 
 # dotenv environment variables file
 .env
-.env.*
 
 # Test keys generated during development
 test_key
