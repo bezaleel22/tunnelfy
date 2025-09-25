@@ -20,5 +20,5 @@ WORKDIR /root/
 COPY --from=builder /app/tunnelfy .
 USER appuser
 
-EXPOSE 2222 8000
+EXPOSE 22 80
 CMD ["./tunnelfy"]
