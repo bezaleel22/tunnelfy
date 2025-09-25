@@ -6,16 +6,9 @@ services:
     container_name: tunnelfy_app
     restart: unless-stopped
     ports:
-      # Map host port 2222 to container port 2222 for SSH
       - "2222:2222"
-      # Map host port 8000 to container port 8000 for HTTP
       - "8000:8000"
     volumes:
-      # Mount the .env file from the host to the container.
-      # This allows you to configure the app without rebuilding the image.
-      # The .env file must exist in the same directory as docker-compose.yml.
       - ./.env:/root/.env
-    # You can add other environment variables directly here if needed,
-    # but the .env file is the recommended approach.
     # environment:
     #   - LOG_REQUESTS=true
