@@ -12,6 +12,7 @@ Tunnelfy is a high-performance SSH tunnel and reverse proxy manager written in G
 - **Admin API**: A JSON endpoint at `/api/routes` to view active tunnels.
 - **Graceful Shutdown**: Handles SIGINT and SIGTERM for clean termination.
 - **Arbitrary Port Allocation**: Correctly handles SSH `-R 0:...` requests by dynamically assigning an available port and communicating it back to the client.
+- **Go SSH Client**: Includes a production-ready Go-based SSH client (`tunnelfy-client`) as an alternative to the system `ssh` command.
 
 ## How It Works
 
@@ -25,7 +26,8 @@ Tunnelfy is a high-performance SSH tunnel and reverse proxy manager written in G
 ### Prerequisites
 
 - Go 1.19 or later
-- An SSH client (e.g., OpenSSH)
+- An SSH client (e.g., OpenSSH) - unless using the Go client
+- Docker and Docker Compose (optional, for containerized deployment)
 
 ### Installation
 
@@ -35,9 +37,13 @@ Tunnelfy is a high-performance SSH tunnel and reverse proxy manager written in G
     cd tunnelfy
     ```
 
-2.  **Build the application:**
+2.  **Build the applications:**
     ```bash
+    # Build the server
     go build -o tunnelfy ./cmd/tunnelfy
+
+    # Build the Go SSH client
+    go build -o tunnelfy-client ./cmd/tunnelfy-client
     ```
 
 ### Configuration
@@ -76,6 +82,10 @@ LOG_REQUESTS=true
 
 ### Running the Server
 
+You can run Tunnelfy either directly from the compiled binary or using Docker Compose.
+
+#### Option 1: Running the Binary
+
 1.  **Ensure your DNS is configured:**
     For local testing, you can add an entry to your `/etc/hosts` file:
     ```bash
@@ -90,16 +100,40 @@ LOG_REQUESTS=true
     ```
     The server will start, and you should see logs indicating the SSH and HTTP listeners are active.
 
+#### Option 2: Running with Docker Compose
+
+1.  **Ensure your DNS is configured** (same as above).
+
+2.  **Make sure you have a `.env` file** in the root of the project. Docker Compose will mount this file into the container.
+
+3.  **Build and run the container:**
+    ```bash
+    docker-compose up --build -d
+    ```
+    This command will build the Docker image (if it doesn't already exist) and start the `tunnelfy` container in detached mode.
+
+4.  **View the logs:**
+    ```bash
+    docker-compose logs -f
+    ```
+
+5.  **Stop the container:**
+    ```bash
+    docker-compose down
+    ```
+
 ### Exposing a Local Service
 
-Once the server is running, users can expose their local services.
+Once the server is running (either via binary or Docker), users can expose their local services using either the standard `ssh` command or the provided `tunnelfy-client`.
+
+#### Option 1: Using the Standard SSH Client
 
 1.  **Generate SSH Keys (for testing):**
     If you don't have a key pair, generate one:
     ```bash
     ssh-keygen -t rsa -b 4096 -f ./test_key -N ""
     ```
-    Add the public key (`test_key.pub`) to the `AUTHORIZED_KEYS` variable in your `.env` file.
+    Add the public key (`test_key.pub`) to the `AUTHORIZED_KEYS` variable in your `.env` file. If you are running with Docker, you will need to restart the container for the changes to take effect: `docker-compose restart`.
 
 2.  **Start a local service:**
     For example, a simple Python HTTP server:
@@ -128,6 +162,30 @@ Once the server is running, users can expose their local services.
     curl http://testuser.tunnelfy.test:8000
     ```
 
+#### Option 2: Using the Go SSH Client (`tunnelfy-client`)
+
+The `tunnelfy-client` provides a Go-native way to establish the tunnel, which can be easily embedded in other Go applications.
+
+1.  **Ensure the server is running** and your public key is authorized (as described in Option 1).
+
+2.  **Start a local service** (e.g., `python3 -m http.server 3000`).
+
+3.  **Run the `tunnelfy-client`:**
+    The client requires flags to specify the connection details.
+
+    **Command:**
+    ```bash
+    ./tunnelfy-client -server localhost:2222 -user testuser -key ./test_key -local localhost:3000 -v
+    ```
+    -   `-server`: The SSH server address.
+    -   `-user`: Your SSH username.
+    -   `-key`: The path to your private SSH key.
+    -   `-local`: The local service address to expose.
+    -   `-v`: (Optional) Enable verbose logging.
+
+4.  **Access your service:**
+    Just like with the standard SSH client, your service will be available at `http://<username>.<ZONE>` (e.g., `http://testuser.tunnelfy.test:8000`).
+
 ### Admin API
 
 Tunnelfy provides a simple API endpoint to inspect currently active routes.
@@ -144,13 +202,15 @@ Tunnelfy provides a simple API endpoint to inspect currently active routes.
 
 ## Architecture
 
--   **`cmd/tunnelfy/main.go`**: Entry point, wires up SSH and HTTP servers, handles configuration and graceful shutdown.
+-   **`cmd/tunnelfy/main.go`**: Entry point for the Tunnelfy server.
+-   **`cmd/tunnelfy-client/main.go`**: Entry point for the Go SSH client.
 -   **`internal/app/app.go`**: Main application logic, initializes and starts the SSH and HTTP servers.
 -   **`internal/config/config.go`**: Handles loading and parsing of configuration from environment variables and `.env` files.
 -   **`internal/proxy/proxy.go`**: Contains the `ShardedRouteManager` for high-performance route lookups and the `FastProxyHandler` for efficiently forwarding HTTP requests.
 -   **`internal/proxy/routes_api.go`**: Implements the `/api/routes` Admin API endpoint.
 -   **`internal/ssh/`**: Contains all SSH-related logic:
     -   `auth.go`: Handles public key authentication.
+    -   `client.go`: Implements the production-ready Go SSH client.
     -   `hostkey.go`: Manages the SSH server's host key (generates one if not provided).
     -   `server.go`: Implements the SSH server, processes `tcpip-forward` and `cancel-tcpip-forward` requests, and manages the lifecycle of the TCP listeners for each tunnel.
 -   **Graceful Shutdown**: The application listens for SIGINT and SIGTERM signals. Upon receiving one, it gracefully shuts down the HTTP and SSH servers, allowing existing connections to complete.
